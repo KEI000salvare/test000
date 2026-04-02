@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>縦スクロールゲーム</title>
+<style>
+canvas {
+  background: #eee;
+  display: block;
+  margin: 0 auto;
+}
+</style>
+</head>
+<body>
+
+<canvas id="game" width="300" height="500"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+
+// ボール
+let balls = [];
+
+function createBall() {
+  balls.push({
+    x: Math.random() * canvas.width,
+    y: 0,
+    r: 5,
+    vy: 3,
+    vx: 0,
+    hit: false
+  });
+}
+
+function hitCircle(a, b) {
+  let dx = a.x - b.x;
+  let dy = a.y - b.y;
+  return dx*dx + dy*dy < (a.r + b.r)*(a.r + b.r);
+}
+
+
+
+
+
+// スコア
+let score = 0;
+
+// プレイヤー
+let player = {
+  x: 150,
+  y: 450,
+  r: 10,
+  speed: 5
+};
+
+// キー入力
+let left = false;
+let right = false;
+
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowLeft") left = true;
+  if (e.key === "ArrowRight") right = true;
+});
+
+document.addEventListener("keyup", e => {
+  if (e.key === "ArrowLeft") left = false;
+  if (e.key === "ArrowRight") right = false;
+});
+
+// 障害物
+let obstacles = [];
+
+function createObstacle() {
+  let x = Math.random() * (canvas.width - 40);
+  obstacles.push({ x: x, y: 0, w: 40, h: 20 });
+}
+
+// 更新処理
+function update() {
+
+  // ボール生成
+if (Math.random() < 0.02) createBall();
+
+// ボール更新
+balls.forEach(b => {
+  b.x += b.vx;
+  b.y += b.vy;
+
+  // 衝突
+  if (!b.hit && hitCircle(player, b)) {
+    b.hit = true;
+
+
+    score += 100;   // ★これ追加（好きな点数でOK）
+
+    let dx = b.x - player.x;
+
+    b.vy = -Math.abs(b.vy); // 上へ
+    b.vx = dx * 0.1;        // 横に弾く
+
+    // めり込み防止
+    b.y -= 5;
+
+    setTimeout(() => b.hit = false, 100);
+  }
+});
+
+// 画面外削除
+balls = balls.filter(b => b.y < canvas.height && b.y > -50);
+
+  score++;
+  // 移動
+  if (left) player.x -= player.speed;
+  if (right) player.x += player.speed;
+
+  // 画面外に出ないように
+  if (player.x < player.r) player.x = player.r;
+  if (player.x > canvas.width - player.r) player.x = canvas.width - player.r;
+
+  // 障害物を動かす
+  obstacles.forEach(o => o.y += 3);
+
+  // 一定確率で生成
+  if (Math.random() < 0.03) createObstacle();
+
+  // 当たり判定（超ざっくり）
+  obstacles.forEach(o => {
+    if (
+      player.x > o.x &&
+      player.x < o.x + o.w &&
+      player.y > o.y &&
+      player.y < o.y + o.h
+    ) {
+      alert("ゲームオーバー\nスコア："+score);
+      document.location.reload();
+    }
+  });
+
+  // 画面外の障害物削除
+  obstacles = obstacles.filter(o => o.y < canvas.height);
+}
+
+// 描画
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // ボール描画
+balls.forEach(b => {
+  ctx.beginPath();
+  ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+  ctx.fill();
+});
+
+
+  // プレイヤー
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 障害物
+  obstacles.forEach(o => {
+    ctx.fillRect(o.x, o.y, o.w, o.h);
+  });
+
+  ctx.fillText("Score: " + score, 10, 20);
+
+}
+
+// ループ
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>
